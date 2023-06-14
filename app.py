@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import HTMLResponse
 import requests
 import asyncio
 
@@ -89,12 +89,21 @@ async def fetch_corporates():
 @app.get("/")
 async def root():
     asyncio.create_task(fetch_corporates())
-    return "Fetching in progress..."
+    return HTMLResponse(
+        """
+        <h1>Fetching in progress...</h1>
+        <script>
+        setTimeout(function() {
+            window.location.href = "/corporate_results";
+        }, 2000);
+        </script>
+        """
+    )
 
 @app.get("/corporate_results")
 async def get_corporate_results():
     global fetch_status
     if fetch_status != "done":
-        return PlainTextResponse("Fetching in progress...")
+        return HTMLResponse("<h1>Fetching in progress...</h1>")
     else:
         return result_json
