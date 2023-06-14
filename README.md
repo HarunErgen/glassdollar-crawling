@@ -18,5 +18,5 @@
 4. Access the web application at http://localhost:80 in your browser.
 
 ## Usage
-Root endpoint (/): Displays a "Fetching in progress..." message while the data is being fetched.
+Root endpoint (/): Displays a "Fetching in progress..." message while the data is being fetched.  
 Corporate results endpoint (/corporate_results): Displays the fetched data when the fetching process is completed.
