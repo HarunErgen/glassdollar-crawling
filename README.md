@@ -4,7 +4,7 @@
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/glassdollar-crawling.git
+   git clone https://github.com/HarunErgen/glassdollar-crawling.git
    ```
 
 2. Build the Docker image:
