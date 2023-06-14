@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 import requests
 import asyncio
 
@@ -106,4 +106,4 @@ async def get_corporate_results():
     if fetch_status != "done":
         return HTMLResponse("<h1>Fetching in progress...</h1>")
     else:
-        return result_json
+        return JSONResponse(content=result_json)
