@@ -1,17 +1,20 @@
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse
 import requests
 import asyncio
+import threading
 
 app = FastAPI()
 
-result_json = {'corporate_details': []}
+result_json = {'corporate_details': [], 'corporate_count': 0}
 fetch_status = "not started"
 
 async def fetch_corporates():
     global result_json
     global fetch_status
 
+    # reset result_json
+    result_json = {'corporate_details': [], 'corporate_count': 0}
     fetch_status = "started"
 
     url = "https://ranking.glassdollar.com/graphql"
@@ -81,29 +84,73 @@ async def fetch_corporates():
             corporate_details_response_data = corporate_details_response.json()
             
             result_json['corporate_details'].append(corporate_details_response_data['data']['corporate'])
-        
+            result_json['corporate_count'] += 1
+
         page += 1
 
     fetch_status = "done"
 
+def fetch_corporates_thread():
+    asyncio.run(fetch_corporates())
+
+@app.post("/start_fetch")
+async def start_fetch():
+    global fetch_status
+    if fetch_status == "started":
+        return {"message": "Fetch is already running"}
+    threading.Thread(target=fetch_corporates_thread).start()
+    return {"message": "Fetch started"}
+
 @app.get("/")
 async def root():
-    asyncio.create_task(fetch_corporates())
-    return HTMLResponse(
-        """
-        <h1>Fetching in progress...</h1>
-        <script>
-        setTimeout(function() {
-            window.location.href = "/corporate_results";
-        }, 2000);
-        </script>
-        """
-    )
+    content = """
+    <html>
+        <head>
+            <title>Corporate Fetch</title>
+            <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+            <script>
+                var currentPage = "/";
+
+                function startFetch() {
+                    currentPage = "/fetch_status";
+                    $.post("/start_fetch", function() {
+                        window.location.href = "/fetch_status";
+                    });
+                }
+
+                function fetchCount() {
+                    $.getJSON("/fetch_status", function(data) {
+                        $('#count').text("Corporates fetched so far: " + data.corporate_count);
+                        if(data.fetch_status == "done" && currentPage == "/fetch_status") {
+                            window.location.href = "/corporate_results";
+                        } else if(currentPage == "/fetch_status") {
+                            setTimeout(fetchCount, 2000);
+                        }
+                    });
+                }
+
+                $(document).ready(function() {
+                    currentPage = "/";
+                    fetchCount();
+                });
+            </script>
+        </head>
+        <body>
+            <button onclick="startFetch()">Start Fetch</button>
+            <p id="count"></p>
+        </body>
+    </html>
+    """
+    return HTMLResponse(content=content)
+
+@app.get("/fetch_status")
+async def fetch_status_route():
+    return {"corporate_count": result_json["corporate_count"], "fetch_status": fetch_status}
 
 @app.get("/corporate_results")
 async def get_corporate_results():
     global fetch_status
-    if fetch_status != "done":
-        return HTMLResponse("<h1>Fetching in progress...</h1>")
+    if fetch_status == "done":
+        return result_json
     else:
-        return JSONResponse(content=result_json)
+        return HTMLResponse("<h1>Fetching in progress...</h1>")
